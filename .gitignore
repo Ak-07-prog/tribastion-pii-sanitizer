@@ -1,0 +1,8 @@
+secret.key
+temp/
+storage/original/
+storage/sanitized/
+__pycache__/
+*.pyc
+.env
+venv/
