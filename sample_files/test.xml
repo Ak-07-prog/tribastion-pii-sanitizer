@@ -1,0 +1,8 @@
+<?xml version='1.0'?>
+<employees>
+    <employee aadhaar='5487 8795 5678'>
+        <name>Rahul Sharma</name>
+        <email>rahul@gmail.com</email>
+        <phone>9876543210</phone>
+    </employee>
+</employees>
