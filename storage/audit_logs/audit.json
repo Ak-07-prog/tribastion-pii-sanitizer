@@ -1,0 +1,5 @@
+{"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 16:15:50.451783", "entry_hash": "a5f0a895103e28db", "prev_hash": "GENESIS"}
+{"action": "FILE_UPLOAD", "user": "admin@company.com", "filename": "test.txt", "pii_count": 6, "risk_score": 100, "attack_vectors": ["SIM Swap"], "timestamp": "2026-03-06 16:15:50.453552", "entry_hash": "8faf91fd95c7f417", "prev_hash": "a5f0a895103e28db"}
+{"action": "PII_DETECTED", "user": "admin@company.com", "filename": "test.txt", "pii_count": 2, "pii_types": ["AADHAAR", "NAME"], "risk_score": 100, "timestamp": "2026-03-06 16:15:50.462865", "entry_hash": "550e3071f6efe875", "prev_hash": "8faf91fd95c7f417"}
+{"action": "FILE_DOWNLOAD", "user": "user@company.com", "filename": "sanitized_test.txt", "timestamp": "2026-03-06 16:15:50.473378", "entry_hash": "a04b0c4f4c8b29cd", "prev_hash": "550e3071f6efe875"}
+{"action": "LOGOUT", "user": "admin@company.com", "timestamp": "2026-03-06 16:15:50.487154", "entry_hash": "3d3b71c68fab0da9", "prev_hash": "a04b0c4f4c8b29cd"}
