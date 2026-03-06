@@ -63,6 +63,7 @@ def admin_dashboard():
 
             st.session_state["result"] = result
             st.session_state["filename"] = uploaded_file.name
+            st.session_state["original_filepath"] = temp_path
             st.rerun()
 
     if "result" in st.session_state:
@@ -97,6 +98,20 @@ def display_results():
                 result["sanitized_text"],
                 height=400
             )
+
+        # show sanitized image if available
+        if result.get("sanitized_image"):
+            st.subheader("🖼️ Sanitized Image")
+            img_col1, img_col2 = st.columns(2)
+            with img_col1:
+                st.write("**Original:**")
+                original_path = st.session_state.get("original_filepath", "")
+                if original_path and os.path.exists(original_path):
+                    st.image(original_path)
+            with img_col2:
+                st.write("**Sanitized:**")
+                st.image(result["sanitized_image"])
+
         if st.download_button(
             "⬇️ Download Sanitized File",
             result["sanitized_text"],
@@ -111,6 +126,28 @@ def display_results():
                 )
             except:
                 pass
+
+        # executive summary export
+        st.markdown("---")
+        if st.button("📊 Generate Executive Summary PDF"):
+            try:
+                from frontend.export import generate_executive_summary
+                pdf_path = generate_executive_summary(
+                    result,
+                    st.session_state.get("filename", "document"),
+                    st.session_state.get("user", "admin")
+                )
+                with open(pdf_path, "rb") as f:
+                    st.download_button(
+                        "⬇️ Download Executive Summary",
+                        f.read(),
+                        file_name="executive_summary.pdf",
+                        mime="application/pdf",
+                        key="pdf_download"
+                    )
+                st.success("✅ Executive Summary generated!")
+            except Exception as e:
+                st.error(f"Export error: {e}")
 
     with tab2:
         display_risk_panel(result)
