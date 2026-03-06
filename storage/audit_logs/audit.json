@@ -8,3 +8,8 @@
 {"action": "PII_DETECTED", "user": "admin@company.com", "filename": "test.txt", "pii_count": 2, "pii_types": ["NAME", "AADHAAR"], "risk_score": 100, "timestamp": "2026-03-06 16:45:09.357844", "entry_hash": "d036bab4648656f2", "prev_hash": "c28f8c57add0b8da"}
 {"action": "FILE_DOWNLOAD", "user": "user@company.com", "filename": "sanitized_test.txt", "timestamp": "2026-03-06 16:45:09.367319", "entry_hash": "ea44a1e38c9ac113", "prev_hash": "d036bab4648656f2"}
 {"action": "LOGOUT", "user": "admin@company.com", "timestamp": "2026-03-06 16:45:09.378011", "entry_hash": "4290c3ac0a4ea8b2", "prev_hash": "ea44a1e38c9ac113"}
+{"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:15:18.982026", "entry_hash": "8460cd1253a9be45", "prev_hash": "4290c3ac0a4ea8b2"}
+{"action": "LOGOUT", "user": "admin@company.com", "timestamp": "2026-03-06 17:21:24.711400", "entry_hash": "381466116dfa9577", "prev_hash": "8460cd1253a9be45"}
+{"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:21:59.210712", "entry_hash": "aa4e42275c7e5053", "prev_hash": "381466116dfa9577"}
+{"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:26:43.390143", "entry_hash": "22b9ad1bb2d7fc17", "prev_hash": "aa4e42275c7e5053"}
+{"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:29:25.295623", "entry_hash": "b084f38287fac119", "prev_hash": "22b9ad1bb2d7fc17"}
