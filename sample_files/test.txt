@@ -1,0 +1,10 @@
+
+        Employee Report
+        Name: Rahul Sharma
+        Aadhaar: 5487 8795 5678
+        Email: rahul.sharma@gmail.com
+        Support: help@company.com
+        Phone: +91 9876543210
+        PAN: BGHPM4521K
+        DOB: 12/05/1978
+        
