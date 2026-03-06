@@ -18,10 +18,11 @@ def show_masking_preview(pii_found):
             with col:
                 preview = get_preview(pii["value"], pii["type"], strategies[i])
                 st.markdown(f"""
-                <div style='background:#1e1e2e; padding:10px; 
-                border-radius:8px; margin:5px 0'>
-                    <small style='color:#e91e8c'>{strategies[i]}</small><br>
-                    <code style='color:white'>{preview}</code>
+                <div style='background:#f0f2f6; padding:10px; 
+                border-radius:8px; margin:5px 0; 
+                border: 1px solid #e91e8c'>
+                    <small style='color:#e91e8c'><b>{strategies[i]}</b></small><br>
+                    <code style='color:#1a1a2e'>{preview}</code>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -32,10 +33,11 @@ def show_masking_preview(pii_found):
                 preview = get_preview(
                     pii["value"], pii["type"], strategies2[i])
                 st.markdown(f"""
-                <div style='background:#1e1e2e; padding:10px;
-                border-radius:8px; margin:5px 0'>
-                    <small style='color:#e91e8c'>{strategies2[i]}</small><br>
-                    <code style='color:white'>{preview}</code>
+                <div style='background:#f0f2f6; padding:10px;
+                border-radius:8px; margin:5px 0;
+                border: 1px solid #e91e8c'>
+                    <small style='color:#e91e8c'><b>{strategies2[i]}</b></small><br>
+                    <code style='color:#1a1a2e'>{preview}</code>
                 </div>
                 """, unsafe_allow_html=True)
 
