@@ -1,0 +1,2 @@
+{"action": "FILE_UPLOAD", "user": "system", "filename": "test.txt", "pii_count": 6, "risk_score": 100, "attack_vectors": ["SIM Swap Attack", "Spear Phishing", "Identity Theft", "Account Takeover"], "timestamp": "2026-03-06 16:20:06.478366", "entry_hash": "764f76361bf7d878", "prev_hash": "GENESIS"}
+{"action": "PII_DETECTED", "user": "system", "filename": "test.txt", "pii_count": 6, "pii_types": ["AADHAAR", "EMAIL", "DOB", "NAME", "PAN", "PHONE"], "risk_score": 100, "timestamp": "2026-03-06 16:20:06.478973", "entry_hash": "051e8a48eaea6c34", "prev_hash": "764f76361bf7d878"}

@@ -49,7 +49,7 @@ def process_file(filepath, masking_strategy):
         except:
             narrative = "Attack narrative unavailable."
 
-        return {
+        result = {
             "sanitized_text": sanitized_text,
             "pii_found": validated_detections,
             "risk_score": risk_data["score"],
@@ -64,6 +64,23 @@ def process_file(filepath, masking_strategy):
                 "processing_time": "calculated"
             }
         }
+
+        # log the processing event
+        try:
+            from file_handlers.audit_logger import log_upload, log_pii_detection
+            user = "system"
+            filename = os.path.basename(filepath)
+            log_upload(user, filename,
+                       len(validated_detections),
+                       risk_data["score"],
+                       risk_data["attack_vectors"])
+            log_pii_detection(user, filename,
+                              validated_detections,
+                              risk_data["score"])
+        except Exception as e:
+            print(f"Logging error: {e}")
+
+        return result
 
     except Exception as e:
         print(f"Pipeline error: {e}")
