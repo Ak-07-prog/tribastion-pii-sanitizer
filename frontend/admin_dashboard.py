@@ -97,12 +97,20 @@ def display_results():
                 result["sanitized_text"],
                 height=400
             )
-        st.download_button(
+        if st.download_button(
             "⬇️ Download Sanitized File",
             result["sanitized_text"],
             file_name=f"sanitized_{st.session_state.get('filename', 'output.txt')}",
             mime="text/plain"
-        )
+        ):
+            try:
+                from file_handlers.audit_logger import log_download
+                log_download(
+                    st.session_state.get("user", "unknown"),
+                    st.session_state.get("filename", "unknown")
+                )
+            except:
+                pass
 
     with tab2:
         display_risk_panel(result)

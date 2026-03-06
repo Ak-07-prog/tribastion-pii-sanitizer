@@ -38,6 +38,12 @@ def login_page():
                 st.session_state["logged_in"] = True
                 st.session_state["user"] = email
                 st.session_state["role"] = USERS[email]["role"]
+                # log login event
+                try:
+                    from file_handlers.audit_logger import log_login
+                    log_login(email, USERS[email]["role"])
+                except:
+                    pass
                 st.success(f"Welcome {USERS[email]['role']}!")
                 st.rerun()
             else:

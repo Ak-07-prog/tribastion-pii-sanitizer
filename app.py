@@ -31,6 +31,11 @@ def main():
 
             st.markdown("---")
             if st.button("🚪 Logout"):
+                try:
+                    from file_handlers.audit_logger import log_logout
+                    log_logout(st.session_state.get("user", "unknown"))
+                except:
+                    pass
                 st.session_state.clear()
                 st.rerun()
 
