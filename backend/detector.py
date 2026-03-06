@@ -1,6 +1,6 @@
+import spacy
 import re
 
-# Each pattern targets one specific PII type
 patterns = {
     "AADHAAR": r'\b[2-9]{1}[0-9]{3}\s[0-9]{4}\s[0-9]{4}\b',
     "PAN": r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b',
@@ -13,6 +13,8 @@ patterns = {
     "UPI": r'\b[a-zA-Z0-9.\-_]{2,256}@oksbi|okaxis|okhdfcbank|okicici|ybl|ibl|axl|waicici\b',
     "PASSPORT": r'\b[A-PR-WYa-pr-wy][1-9]\d\s?\d{4}[1-9]\b'
 }
+
+nlp = spacy.load("en_core_web_sm")
 
 
 def regex_detect(text):
@@ -29,7 +31,40 @@ def regex_detect(text):
     return found
 
 
-# ---- TEST IT ----
+def spacy_detect(text):
+    doc = nlp(text)
+    found = []
+    for ent in doc.ents:
+        if ent.label_ == "PERSON":
+            found.append({
+                "type": "NAME",
+                "value": ent.text,
+                "position": ent.start_char,
+                "confidence": 0.85
+            })
+        elif ent.label_ in ["GPE", "LOC"]:
+            found.append({
+                "type": "ADDRESS",
+                "value": ent.text,
+                "position": ent.start_char,
+                "confidence": 0.75
+            })
+    return found
+
+
+def combined_detect(text):
+    regex_results = regex_detect(text)
+    spacy_results = spacy_detect(text)
+    all_results = regex_results + spacy_results
+    seen_positions = set()
+    unique_results = []
+    for item in all_results:
+        if item["position"] not in seen_positions:
+            unique_results.append(item)
+            seen_positions.add(item["position"])
+    return unique_results
+
+
 if __name__ == "__main__":
     test_text = """
     My name is Rahul Sharma.
@@ -41,9 +76,10 @@ if __name__ == "__main__":
     DOB: 12/05/1978
     IFSC: HDFC0001234
     IP: 103.54.12.77
+    I live in Ahmedabad, Gujarat.
     """
 
-    results = regex_detect(test_text)
+    results = combined_detect(test_text)
     print(f"Found {len(results)} PII items:\n")
     for r in results:
         print(f"Type: {r['type']:<12} Value: {r['value']}")
