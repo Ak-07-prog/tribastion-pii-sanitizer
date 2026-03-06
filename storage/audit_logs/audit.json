@@ -14,3 +14,5 @@
 {"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:26:43.390143", "entry_hash": "22b9ad1bb2d7fc17", "prev_hash": "aa4e42275c7e5053"}
 {"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:29:25.295623", "entry_hash": "b084f38287fac119", "prev_hash": "22b9ad1bb2d7fc17"}
 {"action": "LOGIN", "user": "admin@company.com", "role": "Admin", "timestamp": "2026-03-06 17:31:27.389989", "entry_hash": "66faedd089c6e393", "prev_hash": "b084f38287fac119"}
+{"action": "FILE_UPLOAD", "user": "system", "filename": "test.txt", "pii_count": 6, "risk_score": 100, "attack_vectors": ["SIM Swap Attack", "Spear Phishing", "Identity Theft", "Account Takeover"], "timestamp": "2026-03-06 17:47:35.549211", "entry_hash": "1c57baef669a2b65", "prev_hash": "66faedd089c6e393"}
+{"action": "PII_DETECTED", "user": "system", "filename": "test.txt", "pii_count": 6, "pii_types": ["PHONE", "AADHAAR", "NAME", "EMAIL", "PAN", "DOB"], "risk_score": 100, "timestamp": "2026-03-06 17:47:35.550453", "entry_hash": "f10329e546c1d056", "prev_hash": "1c57baef669a2b65"}
