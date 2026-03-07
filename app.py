@@ -67,8 +67,6 @@ def show_past_reports():
     st.title("📁 Past Reports")
     base_dir = os.path.dirname(os.path.abspath(__file__))
     report_dir = os.path.join(base_dir, "storage", "sanitized")
-    st.write(f"DEBUG: {report_dir}")
-    st.write(f"DEBUG exists: {os.path.exists(report_dir)}")
     if not os.path.exists(report_dir):
         st.info("No reports yet.")
         return

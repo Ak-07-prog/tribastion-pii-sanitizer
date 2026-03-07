@@ -77,7 +77,6 @@ def admin_dashboard():
                                 st.session_state["original_text"] = f.read()
                         except:
                             st.session_state["original_text"] = "Binary file"
-                    st.session_state["original_text"] = "Binary file"
                     st.session_state["result"] = result
                     st.session_state["filename"] = uploaded_file.name
                     st.session_state["original_filepath"] = temp_path
