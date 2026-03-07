@@ -1,8 +1,8 @@
-secret.key
+storage/
 temp/
-storage/original/
-storage/sanitized/
 __pycache__/
 *.pyc
 .env
-venv/
+*.jpeg
+*.jpg
+*.png
