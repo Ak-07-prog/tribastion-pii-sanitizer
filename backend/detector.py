@@ -10,8 +10,10 @@ patterns = {
     "DOB": r'\b(0?[1-9]|[12][0-9]|3[01])[\/\-](0?[1-9]|1[012])[\/\-]\d{4}\b',
     "CARD": r'\b(?:\d{4}[\s\-]?){4}\b',
     "IFSC": r'\b[A-Z]{4}0[A-Z0-9]{6}\b',
-    "UPI": r'\b[a-zA-Z0-9.\-_]{2,256}@oksbi|okaxis|okhdfcbank|okicici|ybl|ibl|axl|waicici\b',
-    "PASSPORT": r'\b[A-PR-WYa-pr-wy][1-9]\d\s?\d{4}[1-9]\b'
+    "UPI": r'\b[a-zA-Z0-9.\-_]{2,256}@(?:oksbi|okaxis|okhdfcbank|okicici|ybl|ibl|axl|waicici)\b',
+    "PASSPORT": r'\b[A-PR-WYa-pr-wy][1-9]\d\s?\d{4}[1-9]\b',
+    "BANK_ACCOUNT": r'\b\d{9,18}\b',
+    "PINCODE": r'\b[1-9][0-9]{5}\b',
 }
 
 nlp = spacy.load("en_core_web_sm")
@@ -28,6 +30,29 @@ def regex_detect(text):
                 "position": match.start(),
                 "confidence": 0.95
             })
+    return found
+
+
+def label_based_detect(text):
+    """Detects PII that appears after keywords like 'Name:', 'Account Number:' etc."""
+    found = []
+    label_patterns = [
+        (r'(?:first\s*name|last\s*name|full\s*name|name)\s*[:\-]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', 'NAME'),
+        (r'(?:account\s*number|a\/c\s*no|acct\.?\s*no)\s*[:\-]?\s*(\d{9,18})', 'BANK_ACCOUNT'),
+        (r'(?:address|addr)\s*[:\-]?\s*(.{10,80}?)(?:\n|pin|village|$)', 'ADDRESS'),
+        (r'(?:ko\s*name|account\s*holder)\s*[:\-]?\s*([A-Z][A-Z\s]+)', 'NAME'),
+        (r'(?:village|city|district|dist)\s*[:\-]?\s*([A-Z][A-Z\s]+)', 'ADDRESS'),
+    ]
+    for pattern, pii_type in label_patterns:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            value = match.group(1).strip()
+            if value:
+                found.append({
+                    "type": pii_type,
+                    "value": value,
+                    "position": match.start(1),
+                    "confidence": 0.90
+                })
     return found
 
 
@@ -55,7 +80,8 @@ def spacy_detect(text):
 def combined_detect(text):
     regex_results = regex_detect(text)
     spacy_results = spacy_detect(text)
-    all_results = regex_results + spacy_results
+    label_results = label_based_detect(text)
+    all_results = regex_results + spacy_results + label_results
     seen_positions = set()
     unique_results = []
     for item in all_results:

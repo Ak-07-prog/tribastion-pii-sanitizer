@@ -3,66 +3,134 @@ import cv2
 import numpy as np
 from PIL import Image
 import os
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
-reader = easyocr.Reader(['en'])
+reader = easyocr.Reader(['en'], gpu=False)
+
+
+def preprocess_image(filepath):
+    image = cv2.imread(filepath)
+    # resize if too small
+    h, w = image.shape[:2]
+    if w < 800:
+        scale = 800 / w
+        image = cv2.resize(image, None, fx=scale, fy=scale)
+    # convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # increase contrast
+    gray = cv2.equalizeHist(gray)
+    # denoise
+    gray = cv2.fastNlMeansDenoising(gray, h=10)
+    # threshold
+    _, thresh = cv2.threshold(
+        gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return image, thresh
+
 
 def process_image(filepath):
-    # extract text via OCR
-    results = reader.readtext(filepath)
+    image, preprocessed = preprocess_image(filepath)
+
+    # run OCR on preprocessed image
+    results = reader.readtext(preprocessed)
+
+    # if low confidence try original
+    if not results or all(r[2] < 0.3 for r in results):
+        results = reader.readtext(filepath)
+
     extracted_text = ' '.join([res[1] for res in results])
-    text_regions = [{"bbox": res[0], "text": res[1]} for res in results]
+    text_regions = [{"bbox": res[0], "text": res[1],
+                     "confidence": res[2]} for res in results]
 
-    # detect ID card type
     id_type = detect_id_type(extracted_text)
-
-    # load image for visual processing
-    image = cv2.imread(filepath)
-
-    # blur faces
-    image = blur_faces(image)
+    image_color = cv2.imread(filepath)
+    image_color = blur_faces(image_color)
 
     return {
         "extracted_text": extracted_text,
         "text_regions": text_regions,
         "id_type": id_type,
-        "image": image
+        "image": image_color
     }
 
 
 def detect_id_type(text):
     text_upper = text.upper()
-    if "AADHAAR" in text_upper or "UIDAI" in text_upper:
+    if "AADHAAR" in text_upper or "UIDAI" in text_upper or "UNIQUE IDENTIFICATION" in text_upper:
         return "AADHAAR"
-    elif "INCOME TAX" in text_upper or "PAN" in text_upper:
+    elif "INCOME TAX" in text_upper or "PERMANENT ACCOUNT" in text_upper:
         return "PAN"
-    elif "PASSPORT" in text_upper:
+    elif "PASSPORT" in text_upper or "REPUBLIC OF INDIA" in text_upper:
         return "PASSPORT"
     elif "DRIVING" in text_upper or "LICENCE" in text_upper:
         return "DRIVING_LICENSE"
+    # check for Aadhaar number pattern
+    import re
+    if re.search(r'\b[2-9]\d{3}\s\d{4}\s\d{4}\b', text):
+        return "AADHAAR"
+    if re.search(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b', text):
+        return "PAN"
     return "UNKNOWN"
 
 
 def blur_faces(image):
-    face_cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-    )
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-    for (x, y, w, h) in faces:
-        face_region = image[y:y+h, x:x+w]
-        blurred = cv2.GaussianBlur(face_region, (99, 99), 30)
-        image[y:y+h, x:x+w] = blurred
+    try:
+        face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        )
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        for (x, y, w, h) in faces:
+            face_region = image[y:y+h, x:x+w]
+            blurred = cv2.GaussianBlur(face_region, (99, 99), 30)
+            image[y:y+h, x:x+w] = blurred
+    except:
+        pass
     return image
 
 
 def redact_pii_regions(image, text_regions, pii_values):
+    import re
+    redacted = image.copy()
+    h, w = redacted.shape[:2]
+
     for region in text_regions:
-        for pii in pii_values:
-            if pii.lower() in region["text"].lower():
-                bbox = region["bbox"]
-                pts = np.array(bbox, np.int32)
-                cv2.fillPoly(image, [pts], (0, 0, 0))
-    return image
+        bbox = region["bbox"]
+        region_text = region["text"].strip()
+
+        if not region_text:
+            continue
+
+        # check if this region is a pure label (ends with colon or is a known header)
+        is_label = bool(re.search(r':\s*$', region_text))
+        is_header = bool(re.search(
+            r'government|india|income tax|department|aadhaar|union bank|passbook|permanent account|MALE|FEMALE',
+            region_text, re.IGNORECASE
+        ))
+
+        if is_label or is_header:
+            continue
+
+        # check if it matches any detected PII value
+        matched_pii = any(
+            len(pii) > 2 and (
+                pii.lower() in region_text.lower() or
+                region_text.lower() in pii.lower()
+            )
+            for pii in pii_values
+        )
+
+        # also redact if it looks like a value (number, name-like, address)
+        looks_like_value = bool(re.search(
+            r'\d{4,}|^[A-Z][a-z]+(\s[A-Z][a-z]+)*$|S\/O|AT\s*[-–]|PO\+|DIST',
+            region_text
+        ))
+
+        if matched_pii or looks_like_value:
+            pts = np.array(bbox, np.int32)
+            cv2.fillPoly(redacted, [pts], (0, 0, 0))
+
+    return redacted
 
 
 def strip_exif(filepath, output_path):
@@ -76,24 +144,3 @@ def strip_exif(filepath, output_path):
 def save_processed_image(image, output_path):
     cv2.imwrite(output_path, image)
     return output_path
-
-
-# ---- TEST IT ----
-if __name__ == "__main__":
-    # create a simple test image with text
-    test_image = np.ones((200, 600, 3), dtype=np.uint8) * 255
-    cv2.putText(test_image, "Name: Rahul Sharma", (10, 50),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
-    cv2.putText(test_image, "Aadhaar: 5487 8795 5678", (10, 100),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
-    cv2.putText(test_image, "Email: rahul@gmail.com", (10, 150),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
-    cv2.imwrite("sample_files/test_image.png", test_image)
-    print("✅ Test image created")
-
-    print("Running OCR...")
-    result = process_image("sample_files/test_image.png")
-    print(f"Extracted text: {result['extracted_text']}")
-    print(f"ID type: {result['id_type']}")
-    print(f"Text regions found: {len(result['text_regions'])}")
-    print("✅ Image processor working")

@@ -12,13 +12,18 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 def process_file(filepath, masking_strategy):
     try:
         # step 1 — extract text based on file type
-        ext = filepath.split(".")[-1].lower()
+        ext = filepath.rsplit(".", 1)[-1].lower().strip()
+
+        sanitized_image_path = None
 
         if ext in ["png", "jpg", "jpeg"]:
-            # image file — use OCR
-            from file_handlers.image_processor import process_image
+            from file_handlers.image_processor import process_image, redact_pii_regions, save_processed_image
+            import cv2
+            import numpy as np
+
             image_result = process_image(filepath)
             text = image_result["extracted_text"]
+            text_regions = image_result["text_regions"]
         else:
             text = extract_text(filepath)
 
@@ -49,6 +54,24 @@ def process_file(filepath, masking_strategy):
         except:
             narrative = "Attack narrative unavailable."
 
+        # step 7 — for images save visually redacted version
+        if ext in ["png", "jpg", "jpeg"]:
+            try:
+                pii_values = [p["value"] for p in validated_detections]
+                redacted_image = redact_pii_regions(
+                    image_result["image"],
+                    image_result["text_regions"],
+                    pii_values
+                )
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                sanitized_dir = os.path.join(base_dir, "storage", "sanitized")
+                os.makedirs(sanitized_dir, exist_ok=True)
+                sanitized_image_path = os.path.join(
+                    sanitized_dir, f"sanitized_{os.path.basename(filepath)}")
+                save_processed_image(redacted_image, sanitized_image_path)
+            except Exception as e:
+                print(f"Image redaction error: {e}")
+
         result = {
             "sanitized_text": sanitized_text,
             "pii_found": validated_detections,
@@ -57,13 +80,25 @@ def process_file(filepath, masking_strategy):
             "attack_vectors": risk_data["attack_vectors"],
             "attack_narrative": narrative,
             "compliance_flags": risk_data["compliance_flags"],
-            "sanitized_image": None,
+            "sanitized_image": sanitized_image_path,
             "audit_data": {
                 "timestamp": str(datetime.now()),
                 "pii_count": len(validated_detections),
                 "processing_time": "calculated"
             }
         }
+
+        # save sanitized output to storage
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            sanitized_dir = os.path.join(base_dir, "storage", "sanitized")
+            os.makedirs(sanitized_dir, exist_ok=True)
+            out_name = f"sanitized_{os.path.basename(filepath)}.txt"
+            out_path = os.path.join(sanitized_dir, out_name)
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(sanitized_text)
+        except Exception as e:
+            print(f"Save error: {e}")
 
         # log the processing event
         try:
@@ -120,7 +155,6 @@ def log_event(event_data):
 
 # ---- TEST IT ----
 if __name__ == "__main__":
-    # create test file
     with open("sample_files/test.txt", "w") as f:
         f.write("""
         Employee Report
@@ -143,3 +177,4 @@ if __name__ == "__main__":
     print(f"Risk Level: {result['risk_level']}")
     print(f"Attack Vectors: {result['attack_vectors']}")
     print(f"Compliance: {result['compliance_flags']}")
+    print(f"Sanitized image: {result['sanitized_image']}")

@@ -1,6 +1,5 @@
 from frontend.masking_preview import show_masking_preview
 from frontend.risk_panel import display_risk_panel
-from pipeline import process_file
 import streamlit as st
 import sys
 import os
@@ -53,20 +52,83 @@ def admin_dashboard():
                 f.write(uploaded_file.getbuffer())
 
             with st.spinner("🔄 Scanning for PII..."):
-                result = process_file(temp_path, strategy)
+                if "Manual Review" in mode:
+                    from backend.detector import combined_detect
+                    from file_handlers.parser import extract_text
+                    text = extract_text(temp_path)
+                    detections = combined_detect(text)
+                    st.session_state["pending_text"] = text
+                    st.session_state["pending_detections"] = detections
+                    st.session_state["pending_filepath"] = temp_path
+                    st.session_state["manual_mode"] = True
+                    st.session_state["original_text"] = text
+                    st.session_state["filename"] = uploaded_file.name
+                    st.session_state.pop("result", None)
+                    st.rerun()
+                else:
+                    from pipeline import process_file as _process
+                    result = _process(temp_path, strategy)
+                    ext = temp_path.rsplit(".", 1)[-1].lower().strip()
+                    if ext in ["png", "jpg", "jpeg"]:
+                        st.session_state["original_text"] = "Image file — see sanitized image below"
+                    else:
+                        try:
+                            with open(temp_path, 'r', encoding='utf-8', errors='replace') as f:
+                                st.session_state["original_text"] = f.read()
+                        except:
+                            st.session_state["original_text"] = "Binary file"
+                    st.session_state["original_text"] = "Binary file"
+                    st.session_state["result"] = result
+                    st.session_state["filename"] = uploaded_file.name
+                    st.session_state["original_filepath"] = temp_path
+                    st.session_state["manual_mode"] = False
+                    st.rerun()
 
-            try:
-                with open(temp_path, 'r', encoding='utf-8') as f:
-                    st.session_state["original_text"] = f.read()
-            except:
-                st.session_state["original_text"] = "Binary file — text extracted for scanning"
+    # manual review mode
+    if st.session_state.get("manual_mode"):
+        st.markdown("---")
+        st.subheader("🔍 Manual Review — Confirm PII Before Masking")
+        detections = st.session_state.get("pending_detections", [])
+        if not detections:
+            st.info("No PII detected.")
+        else:
+            st.write(
+                f"Found **{len(detections)}** PII items. Deselect any false positives:")
+            confirmed = []
+            for i, pii in enumerate(detections):
+                checked = st.checkbox(
+                    f"{pii['type']} — `{pii['value']}` ({int(pii['confidence']*100)}%)",
+                    value=True,
+                    key=f"pii_{i}"
+                )
+                if checked:
+                    confirmed.append(pii)
 
-            st.session_state["result"] = result
-            st.session_state["filename"] = uploaded_file.name
-            st.session_state["original_filepath"] = temp_path
-            st.rerun()
+            if st.button("✅ Apply Masking to Confirmed PII"):
+                from backend.masker import mask_pii
+                from backend.risk_engine import calculate_risk
+                from backend.llm_validator import generate_attack_narrative
+                text = st.session_state["pending_text"]
+                sanitized = mask_pii(text, confirmed, strategy)
+                risk = calculate_risk(confirmed)
+                narrative = generate_attack_narrative(
+                    confirmed, risk["vector_details"])
+                result = {
+                    "sanitized_text": sanitized,
+                    "pii_found": confirmed,
+                    "risk_score": risk["score"],
+                    "risk_level": risk["level"],
+                    "attack_vectors": risk["attack_vectors"],
+                    "attack_narrative": narrative,
+                    "compliance_flags": risk["compliance_flags"],
+                    "sanitized_image": None,
+                    "audit_data": {}
+                }
+                st.session_state["result"] = result
+                st.session_state["manual_mode"] = False
+                st.rerun()
 
-    if "result" in st.session_state:
+    if "result" in st.session_state and not st.session_state.get("manual_mode"):
         display_results()
 
 
@@ -101,7 +163,6 @@ def display_results():
                 label_visibility="collapsed"
             )
 
-        # show sanitized image if available
         if result.get("sanitized_image"):
             st.subheader("🖼️ Sanitized Image")
             img_col1, img_col2 = st.columns(2)
@@ -129,7 +190,6 @@ def display_results():
             except:
                 pass
 
-        # executive summary export
         st.markdown("---")
         if st.button("📊 Generate Executive Summary PDF"):
             try:
